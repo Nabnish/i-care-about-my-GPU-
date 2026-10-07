@@ -1,0 +1,18 @@
+seed: 42
+duration_seconds: 3600
+sampling_interval_seconds: 1
+gpu_count: 8
+
+telemetry:
+  temperature_c:
+    baseline: 55.0
+  voltage_v:
+    baseline: 0.9
+  power_w:
+    baseline: 250.0
+  clock_mhz:
+    baseline: 1500.0
+  utilization:
+    baseline: 0.8
+  ecc_errors:
+    baseline: 0

@@ -1,0 +1,4 @@
+fault_frequency: [low, medium, high]
+telemetry_availability: [1.0, 0.75, 0.5, 0.25]
+fleet_size: [8, 32, 128]
+random_seed: 42

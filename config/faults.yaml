@@ -1,0 +1,13 @@
+faults:
+  thermal_stress:
+    enabled: true
+    probability_per_step: 0.0001
+  voltage_instability:
+    enabled: true
+    probability_per_step: 0.0001
+  ecc_degradation:
+    enabled: true
+    probability_per_step: 0.0001
+  silent_bit_flip:
+    enabled: true
+    probability_per_step: 0.00001
