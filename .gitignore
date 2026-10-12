@@ -2,3 +2,6 @@ data/
 High-resolution-AI-Data-Center-Training-Workloads-Dataset_FigShare/
 eagle_gpu_wide.csv
 esif.hpc.eagle.ganglia.gpu.sixnodes_r103u17.csv
+workload_node_clean.csv
+workload_single_machine_clean.csv
+eagle_clean.csv
