@@ -1,125 +1,97 @@
-import pandas as pd
-from pathlib import Path
 import zipfile
+from pathlib import Path
 
-file_path = Path("data") / "esif.hpc.eagle.ganglia.gpu.sixnodes_r103u17.csv.zip"
-filename = 'esif.hpc.eagle.ganglia.gpu.sixnodes_r103u17.csv'
-parquet_output = Path("filtered_node_r103u17.parquet")
+import numpy as np
+import pandas as pd
 
-# Columns we care about based on your analysis
-target_cols = ['__time', 'dv', 'mt', 'vl']
-chunk_size = 5_000_000
+NODES = ["r103u17", "r104u29"]
+DATA_DIR = Path("data")
+OUT_CSV = Path("eagle_clean.csv")
+CHUNK_SIZE = 5_000_000
 
-print("== STEP 1: Peeking at the first 1M rows ==")
-with zipfile.ZipFile(file_path, 'r') as z:
-    with z.open(filename, 'r') as f:
-        df_peek = pd.read_csv(
-            f, 
-            encoding='latin-1', 
-            usecols=target_cols, 
-            nrows=1_000_000
-        )
-
-print(f"Peek Shape: {df_peek.shape[0]} rows, {df_peek.shape[1]} cols")
-print("Head:")
-print(df_peek.head())
-print("\nUnique Metrics (mt):")
-print(df_peek['mt'].unique())
-print(f"\nTime Range: min = {df_peek['__time'].min()}, max = {df_peek['__time'].max()}")
-print("-" * 50)
+METRICS = {
+    "temp": ("temp_core_c", 10, 110),
+    "power_usage_report": ("power_w", 0, 450),
+    "mem_util": ("util_mem", 0, 100),
+}
+WANTED = [f"gpu{g}_{m}" for g in (0, 1) for m in METRICS]
+METRIC_NAMES = list(METRICS)
 
 
-print("== STEP 2 & 3: Processing in chunks & filtering ==")
-# Define the specific metrics you want to extract
-desired_metrics = [
-    'gpu0_temp', 'gpu1_temp', 
-    'gpu0_power_usage_report', 'gpu1_power_usage_report', 
-    'gpu0_mem_util', 'gpu1_mem_util'
-] # Adjust metric names precisely matching your .unique() output above
+def read_filtered(node):
+    zip_path = DATA_DIR / f"esif.hpc.eagle.ganglia.gpu.sixnodes_{node}.csv.zip"
+    inner = f"esif.hpc.eagle.ganglia.gpu.sixnodes_{node}.csv"
+    parts, total_rows = [], 0
 
-filtered_chunks = []
+    with zipfile.ZipFile(zip_path) as z, z.open(inner) as f:
+        for i, chunk in enumerate(pd.read_csv(
+                f, usecols=["__time", "mt", "vl"], chunksize=CHUNK_SIZE)):
+            total_rows += len(chunk)
+            sub = chunk[chunk["mt"].isin(WANTED)]
 
-with zipfile.ZipFile(file_path, 'r') as z:
-    with z.open(filename, 'r') as f:
-        # Read the file in chunks using the file stream (no extraction to disk!)
-        for chunk_idx, chunk in enumerate(pd.read_csv(
-            f, 
-            encoding='latin-1', 
-            usecols=target_cols, 
-            chunksize=chunk_size,
-            low_memory=False
-        )):
-            # Filter down rows to only the metrics we want
-            # (Check if your exact metric names match string patterns or exact matches)
-            mask = chunk['mt'].isin(desired_metrics)
-            sub_chunk = chunk[mask].copy()
-            
-            if not sub_chunk.empty:
-                # Convert value to float32 to save memory
-                sub_chunk['vl'] = pd.to_numeric(sub_chunk['vl'], errors='coerce').astype('float32')
-                
-                # Convert string columns to category after filtering
-                sub_chunk['mt'] = sub_chunk['mt'].astype('category')
-                sub_chunk['dv'] = sub_chunk['dv'].astype('category')
-                
-                # Parse timestamp after reduction
-                sub_chunk['__time'] = pd.to_datetime(sub_chunk['__time'], unit='s', errors='coerce')
-                
-                filtered_chunks.append(sub_chunk)
-            
-            print(f"Processed chunk {chunk_idx + 1}... Kept {len(sub_chunk)} rows matching criteria.")
+            parts_mt = sub["mt"].str.extract(r"^gpu(\d)_(.+)$")
+            out = pd.DataFrame({
+                "timestamp": pd.to_datetime(sub["__time"], utc=True)
+                               .dt.round("min").dt.tz_localize(None),
+                "gpu_id": parts_mt[0].astype("int8"),
+                "metric": pd.Categorical(parts_mt[1], categories=METRIC_NAMES),
+                "vl": pd.to_numeric(sub["vl"], errors="coerce").astype("float32"),
+            })
+            parts.append(out)
+            print(f"  {node} chunk {i + 1}: kept {len(out)}")
 
-if filtered_chunks:
-    # Concatenate filtered parts
-    final_df = pd.concat(filtered_chunks, ignore_index=True)
-    
-    print(f"\nFinal Filtered Dataset Shape: {final_df.shape}")
-
-else:
-    print("No rows matched the target metrics. Check your `desired_metrics` names against the peek output.")
+    long_df = pd.concat(parts, ignore_index=True)
+    print(f"  {node}: read {total_rows} rows, kept {len(long_df)}")
+    return long_df
 
 
+def to_wide(long_df):
+    """One row per GPU per minute; average readings that land in the same minute."""
+    wide = (long_df.groupby(["timestamp", "gpu_id", "metric"], observed=True)["vl"]
+                   .mean().unstack("metric").reset_index())
+    wide.columns.name = None
+    return wide.rename(columns={m: v[0] for m, v in METRICS.items()})
 
 
-df = final_df.copy()
+def range_check(df):
+    """Out-of-range readings become NaN (never 0). Existing NaNs are not counted."""
+    for _, (col, lo, hi) in METRICS.items():
+        bad = df[col].notna() & ~df[col].between(lo, hi)
+        print(f"  range check {col}: {int(bad.sum())} replaced with NaN")
+        df.loc[bad, col] = np.nan
+    return df
 
-# Extract GPU ID before renaming metrics
-df["gpu_id"] = df["mt"].str.extract(r"(gpu\d+)")
-df["gpu_id"] = df["gpu_id"].fillna("system")
 
-# Normalize metric names
-'''rename_map = {
-    "temp": "temp_core_c",
-    "power_usage_report": "power_w",
-    "graphics_clock_report": "clock_mhz",
-    "mem_util": "util_mem",
-    "fb_memory": "fb_memory",
-    "bar1_memory": "bar1_memory",
-    "decoder_util": "decoder_util",
-    "encoder_util": "encoder_util",
-    "ecc_db_error": "ecc_db_error",
-    "fan": "fan",
-    "mem_total": "mem_total",
-}'''
+def add_flags_and_ids(df, node):
+    cols = [v[0] for v in METRICS.values()]
+    for c in cols:
+        df[f"{c}_missing"] = df[c].isna().astype("int8")
+        print(f"  {c}: {int(df[c].isna().sum())} NaN cells")
 
-df["metric"] = (
-    df["mt"]
-    .str.replace(r"^gpu\d+_", "", regex=True)
-    
-)
+    df = df.sort_values(["gpu_id", "timestamp"]).reset_index(drop=True)
+    df["gap_min"] = df.groupby("gpu_id")["timestamp"].diff().dt.total_seconds() / 60
 
-# Pivot: one row per timestamp, node, and GPU
-wide_df = df.pivot_table(
-    index=["__time", "dv", "gpu_id"],
-    columns="metric",
-    values="vl",
-    aggfunc="last"
-).reset_index()
+    df.insert(0, "run_id", node + "_gpu" + df["gpu_id"].astype(str))
+    df.insert(1, "node", node)
+    df["gpu_model"] = "Eagle-16GB"
+    df["source"] = "eagle"
+    return df
 
-wide_df.columns.name = None
 
-# Save processed dataset
-wide_df.to_csv("eagle_gpu_wide.csv", index=False)
+frames = []
+for node in NODES:
+    print(f"== {node} ==")
+    df = to_wide(read_filtered(node))
+    print("  shape after pivot:", df.shape)
+    df = range_check(df)
+    df = add_flags_and_ids(df, node)
+    print("  rows per gpu:", df.groupby("gpu_id").size().to_dict())
+    print("  biggest gap (min):", df["gap_min"].max())
+    frames.append(df)
 
-print("Transformed shape:", wide_df.shape)
-print(wide_df.head())
+eagle = pd.concat(frames, ignore_index=True)
+eagle.to_csv(OUT_CSV, index=False)
+
+print("\n== FINAL ==")
+print("shape:", eagle.shape, "| run_ids:", eagle["run_id"].nunique())
+print(eagle[["temp_core_c", "power_w", "util_mem"]].agg(["min", "mean", "max"]).round(1))

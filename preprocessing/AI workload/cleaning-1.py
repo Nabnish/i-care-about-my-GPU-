@@ -52,14 +52,12 @@ with zipfile.ZipFile(file_path1, 'r') as z:
             )
 
             if not is_node:
-                # HWiNFO appends a repeated header row + the GPU name row at the end.
-                # Drop them, then turn the sensor columns into numbers.
+                
                 df = df[df['Date'].str.match(r'^\d+\.\d+\.\d{4}$', na=False)].copy()
                 sensor_cols = [c for c in df.columns if c not in ('Date', 'Time')]
                 df[sensor_cols] = df[sensor_cols].apply(pd.to_numeric, errors='coerce')
 
             print(f"Shape: {df.shape[0]} rows, {df.shape[1]} cols")
-            # node files: summarise GPU 0 only (all 8 GPUs have the same columns)
             view = df.filter(like='gpu0_') if is_node else df
             print(view.describe().T[['count', 'min', 'mean', 'max']])
             print("-" * 40)
