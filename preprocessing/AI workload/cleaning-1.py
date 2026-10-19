@@ -138,3 +138,5 @@ print("\nNODE: rows", len(node_df), "| per run:", node_df.groupby("run_id").size
 print(node_df.groupby("run_id")[["temp_core_c", "power_w"]].max().round(1))
 print("\nSINGLE: rows", len(single_df), "| per run:", single_df.groupby("run_id").size().to_dict())
 print(single_df.groupby("run_id")[["voltage_v", "temp_core_c"]].agg(["min", "max"]).round(3))
+print(single_df.describe())
+print(single_df.columns)
