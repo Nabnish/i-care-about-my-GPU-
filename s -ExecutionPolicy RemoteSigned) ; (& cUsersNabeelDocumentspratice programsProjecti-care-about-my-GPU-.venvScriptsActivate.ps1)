@@ -1,0 +1,53 @@
+[33mcommit a50ebee3000a1a9c2d5d9ca2d7f4ee178209f7eb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Nabeel <nabeelpasha74@gmail.com>
+Date:   Mon Oct 19 13:33:48 2026 +0530
+
+    training details are in the md file
+
+[33mcommit c5147126049c77e8543a237f472e5223b0fb0b9b[m
+Author: Nabeel <nabeelpasha74@gmail.com>
+Date:   Fri Oct 16 04:36:58 2026 +0530
+
+    (feat)preprocessing- done:synthetic_dataset
+
+[33mcommit c1701869c26b1af3f35f67d9c5b163442115fe30[m
+Author: Nabeel <nabeelpasha74@gmail.com>
+Date:   Wed Oct 14 01:06:02 2026 +0530
+
+    (feat)cleaning: synthesis of missing parameters using a simulator(yes this part is aied, idk how to code)
+
+[33mcommit 7d6af8edfc65bc88f708e49a0696fc995f4a0cf0[m
+Author: Nabeel <nabeelpasha74@gmail.com>
+Date:   Tue Oct 13 04:23:19 2026 +0530
+
+    (feat)cleaning: stage-2: ai-workload dataset completed
+
+[33mcommit 5f7ac3390a3b696ac7e778dea7d2b803dd942ef0[m
+Author: Nabeel <nabeelpasha74@gmail.com>
+Date:   Tue Oct 13 04:16:50 2026 +0530
+
+    (feat)cleaning-stage-2: completed for r103u17 & r104u29
+
+[33mcommit 7066f1c6d1624f2711fda43caef19ed94857a32b[m
+Author: Nabeel <nabeelpasha74@gmail.com>
+Date:   Tue Oct 13 04:12:20 2026 +0530
+
+    (feat)cleaning-stage-2: completed for r103u17 & r104u29
+
+[33mcommit f6752d589c56aa6f1eaaae51a90e131889ab6d85[m
+Author: Nabeel <nabeelpasha74@gmail.com>
+Date:   Tue Oct 13 03:21:48 2026 +0530
+
+    (feat)cleaning-stage-2: completed for r103u17 & r104u29
+
+[33mcommit 2b261d3a64cacc8c21ad4de922349808d501dadb[m
+Author: Nabeel <nabeelpasha74@gmail.com>
+Date:   Mon Oct 12 01:27:47 2026 +0530
+
+    dataset extracted-(feat)cleaning: step-1 datafram view
+
+[33mcommit 3b447a6f5d69bfc5020c4f0859373dc905c7bb42[m
+Author: Nabeel <nabeelpasha74@gmail.com>
+Date:   Wed Oct 7 19:12:41 2026 +0530
+
+    initial commit - setup done
