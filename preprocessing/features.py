@@ -1,6 +1,6 @@
 
 import pandas as pd
-from windows import window
+from preprocessing.windows import window
 
 CURRENT = ["temp_core_c", "temp_mem_c", "power_pct_tdp", "util_gpu",
            "util_mem", "voltage_v", "throttle_flag"]
