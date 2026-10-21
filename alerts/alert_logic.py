@@ -36,3 +36,22 @@ if __name__ == "__main__":
     with open("models/saved/alert_threshold.json", "w") as f:
         json.dump({"threshold": float(thr)}, f)
     print("threshold:", thr)
+    import pandas as pd
+from preprocessing.windows import window
+
+df = window()
+t = df[te][["run_id", "timestamp"]].copy()
+t["alert"] = pred_test >= thr
+t["timestamp"] = pd.to_datetime(t["timestamp"])
+
+# check 1: alert rows per GPU (top 10)
+per_gpu = t.groupby("run_id")["alert"].sum().sort_values(ascending=False)
+print(per_gpu.head(10))
+
+# check 2: merge alerts within 15 minutes into one event
+a = t[t["alert"]].sort_values(["run_id", "timestamp"])
+gap = a.groupby("run_id")["timestamp"].diff()
+new_event = gap.isna() | (gap > pd.Timedelta("15min"))
+events = new_event.groupby(a["run_id"]).sum()
+print(events[events > 0])
+print("events per GPU/day:", round(events.sum() / 8 / 14, 2))
