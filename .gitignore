@@ -1,3 +1,5 @@
+__pycache__/
+
 data/
 High-resolution-AI-Data-Center-Training-Workloads-Dataset_FigShare/
 eagle_gpu_wide.csv
